@@ -1,6 +1,6 @@
-
-
-
+docker network create -d bridge stockmock-net
+mkdir -p /stockmock/data/db 
+docker run --name stock_mongo -v /stockmock/data/db:/data/db  --network stockmock-net --restart=always  -d mongo:3.4.19-jessie
 
 #############################################################################################
 #######docker network create -d bridge <my-net>  #创建docker网络
