@@ -94,7 +94,6 @@ class SP(object):
             return 
         
         self.api.disconnect()
-
     
     def updatetotal(self):
         '''更新总资金
@@ -108,19 +107,6 @@ class SP(object):
         '''
         self.permoney = self.total * self.rate /len(self.products)
         return self.permoney
-    
-    def set_number(self):
-        '''自动设置手数
-        '''
-        df = self.trader.query_instrument()
-        df.loc[:,"pid"] = df["ProductID"].apply(lambda x: x.upper())
-        
-        for k,v in self.products.items():
-            VolumeMultiple = df[df["pid"] == k].iloc[0]["VolumeMultiple"]
-            price = self.api.get_instrument_quote(v["market"],v["zl"])[0]["pre_close"]
-            v["number"] = int(self.permoney/VolumeMultiple/price)
-            
-        return self.products
     
     def _get_incon(self,):
         '''获取行业分类代码
@@ -258,11 +244,9 @@ class SP(object):
         self.updatetotal() #更新账户总资金
         self.set_permoney() #设置单个品种资金上限
         logger.info("set per product money limit:{}".format(self.permoney))
-#         self.set_instrument() #设置主力合约
-#         logger.info("set product zhu li he yue succcessful !!!")
+        self.set_instrument() #设置交易股票和手数
+        logger.info("set product zhu li he yue succcessful !!!")
 
-    
-    
     def handledata(self,df,args=[]):
         df.loc[:,"number"] = range(df.shape[0]) 
         s,m,l = args
@@ -411,31 +395,16 @@ class SP(object):
     def handleposition(self):
         '''计算多仓，空仓，以及昨仓和今仓
         '''
-        df_h = self.trader.investor_position()
-        self.df_h = df_h[df_h["Position"]>0]
-        self.df_h.loc[:,"newposition"] = self.df_h["Position"]
-        #self.df_h.loc[:,"YdPosition"] = self.df_h["Position"]-self.df_h["TodayPosition"] #修正仓位，#注意：可能会出现bug，把索引修改掉
-        self.df_h["YdPosition"] = self.df_h["Position"]-self.df_h["TodayPosition"] #修正仓位
-        self.df_h.loc[:,"yup"] = self.df_h["YdPosition"]
-        self.df_h.loc[:,"ydown"] = self.df_h["YdPosition"]
-        self.df_h.loc[:,"tup"] = self.df_h["TodayPosition"]
-        self.df_h.loc[:,"tdown"] = self.df_h["TodayPosition"]
-        
-        self.df_h.loc[self.df_h["Signal"]==2,"yup"] = 0
-        self.df_h.loc[self.df_h["Signal"]==2,"tup"] = 0
-        self.df_h.loc[self.df_h["Signal"]==1,"ydown"] = 0
-        self.df_h.loc[self.df_h["Signal"]==1,"tdown"] = 0
-        
-        self.df_h.loc[self.df_h["Signal"]==2,"newposition"] *= -1
-        
-        self.g_df = self.df_h.groupby("InstrumentID").sum()
+        _,holdlists = self.trader.position()
+        self.hd_df = holdlists[["证券代码","参考持股"]]
+        self.hd_df.set_index("证券代码",inplace=True)
+        return self.hd_df
     
     def run(self):
         
         if not self.trading:
             return
         
-        self.trader.checkconnection()
         self.handleposition()
 
         zllist = [v["zlhy"] for v in self.products.values()]
@@ -473,9 +442,6 @@ if __name__ == '__main__':
     
     s = SP(userid=account,rate=rate,products=products)
     s.initial()
-    print(s.set_instrument())
-#     print(s.get_tdxhy_list())
-#     s.initial()
 #     
 #     sched = BlockingScheduler()
 #     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9,21',minute='1',misfire_grace_time=60)
