@@ -9,8 +9,11 @@ from requests.auth import HTTPBasicAuth
 import pandas as pd
 
 class trade(object):
-    def __init__(self,UserID="xuhshen",api=None,server="http://192.168.0.100:5000"):
+    def __init__(self,UserID="xuhshen",api=None,server="http://192.168.0.100:5000",mock=True):
         self.api = api
+        self.server = server
+        self.account = UserID
+        self.mock = mock
     
     @property    
     def token(self):
@@ -21,10 +24,13 @@ class trade(object):
         return token
     
     def position(self):
-        r=requests.get(self.server+'/positions', auth=HTTPBasicAuth(self.token, 'x'))
-        data=json.loads(r.text)
-        holdlists = pd.DataFrame(data["dataTable"]["rows"],columns=data["dataTable"]["columns"] )
-        accountinfo = pd.DataFrame(data["subAccounts"])
+        if self.mock:
+            pass
+        else:
+            r=requests.get(self.server+'/positions', auth=HTTPBasicAuth(self.token, 'x'))
+            data=json.loads(r.text)
+            holdlists = pd.DataFrame(data["dataTable"]["rows"],columns=data["dataTable"]["columns"] )
+            accountinfo = pd.DataFrame(data["subAccounts"])
         return accountinfo,holdlists
     
     def _select_market_code(self,code):
@@ -56,30 +62,24 @@ class trade(object):
         return rst
     
     def set_buy_price(self,stock):
-        self.code = stock
         market = self.get_latest_price(stock)
-        buy_price = market["bid1"]+0.01
+        buy_price = market["bid1"]
         return buy_price
     
     def set_sell_price(self,stock):
         market = self.get_latest_price(stock)
-        sell_price = market["ask1"]-0.01
+        sell_price = market["ask1"]
         return sell_price            
     
-    def buy(self,stock="",limitmoney=25000,number=0):
+    def buy(self,stock,number):
         '''买入股票
         '''
         price = self.set_buy_price(stock)
-        if not number:
-            number =  100*int(0.01*limitmoney/price)
-        
         postdata={"action":0,"priceType":0,"price":price,"amount":number,"symbol":stock}
         self.order(postdata)    
         
-    def sell(self,stock='',number=0):
-        self.code = stock
+    def sell(self,stock,number):
         price = self.set_sell_price(stock)
-        number = int(number)
         postdata={"action":1,"priceType":0,"price":price,"amount":number,"symbol":stock}
         self.order(postdata)  
 
@@ -92,7 +92,10 @@ class trade(object):
            "amount":200, #必须是整型，不能是float，c_int转换貌似失效
            "symbol":"131810"}  #131810  204001
         '''
-        r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
+        if self.mock:
+            pass
+        else:
+            r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
         return r.text
 
     def cancelorder(self,orderid=[],isall=True):
@@ -101,8 +104,11 @@ class trade(object):
         if orderid or isall:
             postdata = {"orderid":orderid,"all":isall}
             try:
-                r=requests.post(self.server+'/cancelorder',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
-                return r.text 
+                if self.mock:
+                    pass
+                else:
+                    r=requests.post(self.server+'/cancelorder',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
+                    return r.text 
             except:pass
         return 
 

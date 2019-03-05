@@ -16,7 +16,7 @@ import datetime
 import tushare as ts
 
 class SP(object):
-    def __init__(self,userid="125733",rate=1.2,products="1",limit=2,total=1000000):
+    def __init__(self,userid="account4",rate=1.2,products="1",limit=2,total=1000000):
         if products == "1":
             self.products = {'880414': {'args': (3, 12, 90), 'stocklst': {}}, '880456': {'args': (6, 28, 40), 'stocklst': {}}, 
                              '880476': {'args': (5, 20, 90), 'stocklst': {}}, '880440': {'args': (4, 8, 85),  'stocklst': {}}, 
@@ -98,8 +98,8 @@ class SP(object):
     def updatetotal(self):
         '''更新总资金
         '''
-#         accountinfo,_ = self.trader.position()
-#         self.total = accountinfo["总资产"]["人民币"]
+        accountinfo,_ = self.trader.position()
+        self.total = accountinfo.ix["总资产"]["人民币"]
         return self.total
     
     def set_permoney(self):
@@ -280,103 +280,28 @@ class SP(object):
         result |= (df.iloc[-1][str(5*l)+"UP"]<=0)&(df.iloc[-1][str(5*m)+"UP"]>0)&(df.iloc[-1][str(5*s)+"UP"]>0)    
         return result
     
-    def sync(self,product,director=True):
-        ins = self.products[product]["zlhy"]
-        number = self.products[product]["number"]
-        
-        if ins in self.g_df.index:
-            h_number = self.g_df.ix[ins]["newposition"]
-            up_number = self.g_df.ix[ins]["yup"] + self.g_df.ix[ins]["tup"]
-            down_number = self.g_df.ix[ins]["ydown"] + self.g_df.ix[ins]["tdown"]
+    def sync(self,idx,director=True):
+        stocks = self.products[idx]["stocklst"]
+        for stock,number in stocks.items():
+            if not director: number = 0 #空信号,清仓
             
-            if director: #多单 2：空单   1：多单
-                logger.info("holdnumber:{} ,limitnumber:{},up !".format(h_number,number))
-                if down_number >0:
-                    self.sell_close(ins)
-                    
-                if up_number < number:
-                    self.buy_open(ins,number-up_number)
-                elif h_number > number:
-                    self.buy_close(ins,h_number-number)
-            else: #空单
-                logger.info("holdnumber:{} ,limitnumber:{},down!".format(h_number,number))
-                if up_number>0:
-                    self.buy_close(ins)
-                
-                if down_number<number:
-                    self.sell_open(ins,number-down_number)
-                elif -h_number>number:
-                    self.sell_close(ins,-h_number-number)
-        else:
-            logger.info("InstrumentID not hold ! new open !")
-            if director: #多单
-                self.buy_open(ins,number)
-            else:
-                self.sell_open(ins,number)
+            #判断现有持仓
+            try:
+                h_number = self.hd_df.ix[stock]["参考持股"]
+            except:
+                h_number = 0
+        
+            #补仓差
+            if number>h_number:
+                self.buy(stock,number-h_number)
+            elif number<h_number:
+                self.sell(stock,h_number-number)
     
-    def close(self,ins):
-        
-        if self.g_df.ix[ins]["yup"] +self.g_df.ix[ins]["tup"] >0:
-            self.buy_close(ins) 
-        if self.g_df.ix[ins]["ydown"] +self.g_df.ix[ins]["tdown"] >0:
-            self.sell_close(ins)
-            
-    def buy_open(self,ins,number):
-        '''开多仓
-        '''
-        ins_b = bytes(ins, encoding = "utf8")
-        self.trader.buy_open(ins_b,int(number),jump=0) 
+    def buy(self,stock,number):
+        self.trader.buy(stock, number)
     
-    def buy_close(self,ins,number=0):
-        '''平多仓
-        '''
-        y_num = int(self.g_df.ix[ins]["yup"])
-        t_num = int(self.g_df.ix[ins]["tup"])
-        ins_b = bytes(ins, encoding = "utf8")
-        number = int(number)
-        
-        if number>0:
-            if y_num>0 and y_num>number:
-                self.trader.buy_close(ins_b,number,jump=0) 
-            elif y_num>0 and y_num<number:
-                self.trader.buy_close(ins_b,y_num,jump=0) 
-                self.trader.buy_close(ins_b,number-y_num,today=True,jump=0)
-            else:
-                self.trader.buy_close(ins_b,number,today=True,jump=0)
-        else:
-            if y_num>0:
-                self.trader.buy_close(ins_b,y_num,jump=0) 
-            if t_num>0:
-                self.trader.buy_close(ins_b,t_num,today=True,jump=0)
-    
-    def sell_open(self,ins,number):
-        '''开空仓
-        ''' 
-        ins_b = bytes(ins, encoding = "utf8")
-        self.trader.sell_open(ins_b,int(number),jump=0)
-        
-    def sell_close(self,ins,number=0):
-        '''平空仓
-        '''
-        logger.info("sell close,number:{}".format(number))
-        y_num = int(self.g_df.ix[ins]["ydown"])
-        t_num = int(self.g_df.ix[ins]["tdown"])
-        ins_b = bytes(ins, encoding = "utf8")
-        number = int(number)
-        
-        if number>0:
-            if y_num>0 and y_num>number:
-                self.trader.sell_close(ins_b,number,jump=0) 
-            elif y_num>0 and y_num<number:
-                self.trader.sell_close(ins_b,y_num,jump=0) 
-                self.trader.sell_close(ins_b,number-y_num,today=True,jump=0)
-            else:
-                self.trader.sell_close(ins_b,number,today=True,jump=0)
-        else:
-            if y_num>0:
-                self.trader.sell_close(ins_b,y_num,jump=0) 
-            if t_num>0:
-                self.trader.sell_close(ins_b,t_num,today=True,jump=0)
+    def sell(self,stock,number):
+        self.trader.sell(stock, number)
     
     def check_position(self,status):
         '''检查仓位情况
@@ -395,6 +320,7 @@ class SP(object):
     def handleposition(self):
         '''计算多仓，空仓，以及昨仓和今仓
         '''
+        self.trader.cancelorder() #先尝试撤单
         _,holdlists = self.trader.position()
         self.hd_df = holdlists[["证券代码","参考持股"]]
         self.hd_df.set_index("证券代码",inplace=True)
@@ -406,42 +332,25 @@ class SP(object):
             return
         
         self.handleposition()
-
-        zllist = [v["zlhy"] for v in self.products.values()]
+        
         rst = {}
+        for idx in list(self.products.keys()):
+            director = self.handledata(self.getdata(idx,market=1),self.products[idx]["args"]) #用指数出信号
+            self.sync(idx,director)
+            rst[idx] = {"up":director,"number":self.products[idx]["stocklst"],"product":idx}
         
-        for ins,ins_t in list(self.monitorlist.items()):
-            product = ins_t[:-4]
-            if ins not in zllist and ins not in self.df_h.index:
-                del self.monitorlist[ins]
-            elif ins not in zllist and ins in self.df_h.index:
-                logger.info("close not main ins:{}".format(ins))
-                self.close(ins)
-            else:
-                market = self.products[product]["market"]
-                director = self.handledata(self.getdata(ins_t[:-4]+"L9",market),self.products[product]["args"]) #用指数出信号
-                self.sync(product,director)
-                rst[ins] = {"up":director,"number":self.products[product]["number"],"product":product}
-        
-        for _ in range(3): #尝试最多检查三次持仓情况和理论持仓状态
-            handlelist = self.check_position(rst)
-            if len(handlelist) == 0:
-                break
-            for ins in handlelist:
-                self.sync(rst[ins]["product"],rst[ins]["up"])
-            
-                
         logger.info("lastest position status:{}".format(rst))
             
 
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
-    account = os.environ.get('ACCOUNT',"125733")
+    account = os.environ.get('ACCOUNT',"account4")
     rate = float(os.environ.get('RATE',3))
     products = os.environ.get('PRODUCTS',"1")
     
     s = SP(userid=account,rate=rate,products=products)
     s.initial()
+    print(s.products)
 #     
 #     sched = BlockingScheduler()
 #     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9,21',minute='1',misfire_grace_time=60)
