@@ -9,6 +9,7 @@ import tushare as ts
 import os
 import math
 from pytdx.hq import TdxHq_API
+from cfg import logger
 
 class MongoDB(object):
     def __init__(self,ip="stock_mongo", #mongo db 数据库docker 容器名
@@ -95,6 +96,7 @@ class MongoDB(object):
                     close = rst[1]["close"] 
                 preclose = (close*10-dct["fenhong"]+dct["peigu"]*dct['peigujia'])/(10+dct['peigu']+dct['songzhuangu'])
                 rate = close/preclose
+                logger.info("除权除息：{}，rate：{}".format(stock,rate))
                 for account in self.accounts:
                     filt = {"code":stock,"cx_date":{"$ne":self.today}}
                     dt = {"$mul": {"cost":1/rate, "number":rate},"$set":{"cx_date":self.today}}
@@ -122,6 +124,7 @@ class MongoDB(object):
             self.set_accounts()
             self.set_stocks()
             self.handle_ex_right() 
+        logger.info("initial finished")
 
     def _select_market_code(self,code):
         code = str(code)

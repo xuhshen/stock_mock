@@ -1,0 +1,16 @@
+docker build -t 127.0.0.1:5000/xuhshen/stock_mock:latest .  #做镜像
+
+#####################################################################################
+#####配置内部docker 网络
+docker network create -d bridge stockmock-net #一次性配置
+
+#####创建外挂数据库目录
+mkdir -p /stockmock/data/db  #一次性配置
+
+#####################################################################################
+####启动数据库容器
+docker run --name stock_mongo -v /stockmock/data/db:/data/db  --network stockmock-net --restart=always  -d mongo:3.4.19-jessie
+
+
+####启动撮合程序
+docker run -d --name stock_mock -e IP=stock_mongo --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/simulation.py
