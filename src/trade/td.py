@@ -7,6 +7,8 @@ import requests
 import json
 from requests.auth import HTTPBasicAuth
 import pandas as pd
+from pymongo import MongoClient 
+import datetime
 
 class trade(object):
     def __init__(self,UserID="xuhshen",api=None,server="http://192.168.0.100:5000",mock=True):
@@ -137,3 +139,69 @@ class trade(object):
 #         postdata = {"action":3,"priceType":0,"price":price,"amount":num,"symbol":self.qyznhg}
 #         self.order(postdata)
         
+class MongoDB(object):
+    def __init__(self,ip="stock_mongo", #mongo db 数据库docker 容器名
+                     port=27017, 
+                     user_name=None, 
+                     pwd=None,
+                     authdb=None):
+        self.__server_ip = ip
+        self.__server_port = port
+        self.__user_name = user_name
+        self.__pwd = pwd
+        self.__authdb = authdb
+        self.client = None
+    
+    @property    
+    def info(self):
+        info = "ip={}:{},user_name={},pwd={},authdb={}".format(self.__server_ip,self.__server_port,\
+            self.__user_name,self.__pwd,self.__authdb)
+        return info
+            
+    def connect(self):
+        '''建立数据库的连接
+        '''
+        _db_session = MongoClient(self.__server_ip, self.__server_port)
+        if  self.__user_name:        
+            eval("_db_session.{}".format(self.__authdb)).authenticate(self.__user_name,self.__pwd)      
+        
+        self.client = _db_session
+        return _db_session
+
+    def disconnect(self):
+        '''断开数据库连接        
+        '''
+        self._db_session.close()
+        return True
+    
+    def _dbclient(self,db):
+        '''返回某个特定数据库的对象
+        '''
+        return eval("self.client.{}".format(db))
+
+    def update(self,collection,strategy,data={},db="POSITION"):
+        '''更新每个策略对应的交易标的持仓数量
+           collection: 账号名字
+           strategy：策略
+           data:{"《交易标的》":"《数量》"}
+        '''
+        tm = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if len(data)>0:
+            bulk = self._dbclient(db)[collection].initialize_ordered_bulk_op()
+            for ins,number in data.items():
+                d = {"number":number,"status":True,"datetime":tm}
+                bulk.find({"name":strategy,"ins":ins}).upsert().update({"$set":d})
+            bulk.execute()
+    
+    def set_false(self,collection,strategy,holdlist=[],drop=False,db="POSITION"):
+        '''把不在交易列表内的交易标的设置为非持有状态
+                   如果drop为True，则删除该记录
+        '''
+        self._dbclient(db)[collection].update_many({'name':strategy,'ins':{'$nin':holdlist}}, {"$set":{'status':False,'number':0}})
+    
+    def get(self,collection,holdlist,db="POSITION"):
+        '''获取每个策略对应的交易标的持仓数量
+        '''
+        filt = {'ins':{'$in':holdlist},"status":True}
+        rst = [i for i in self._dbclient(db)[collection].find(filt)]
+        return rst
