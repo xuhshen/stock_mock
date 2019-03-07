@@ -18,6 +18,7 @@ class trade(object):
         self.mock = mock
         if mock:
             self.mongodb = MongoDB()
+            self.mongodb.connect()
     
     @property    
     def token(self):
