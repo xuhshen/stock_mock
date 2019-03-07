@@ -246,7 +246,7 @@ class SP(object):
         self.set_permoney() #设置单个品种资金上限
         logger.info("set per product money limit:{}".format(self.permoney))
         self.set_instrument() #设置交易股票和手数
-        logger.info("set product zhu li he yue succcessful !!!")
+        logger.info("set stock list succcessful !!!")
 
     def handledata(self,df,args=[]):
         df.loc[:,"number"] = range(df.shape[0]) 

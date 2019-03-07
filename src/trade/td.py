@@ -201,7 +201,7 @@ class MongoDB(object):
         return eval("self.client.{}".format(db))
 
     def getaccount(self,account):
-        clt = [i for i in self._dbclient(self.db)[self.account].find({"account":account})]
+        clt = [i for i in self._dbclient(self.db)[self.account_collection].find({"account":account})]
         return clt
     
     def getholdlist(self,account):
