@@ -14,7 +14,14 @@ class Tool(MongoDB):
         self._dbclient(self.db)[self.account_collection].update_one({"account":name},{"$set":rst},upsert=True)
         
     def getacchistory(self,name):
-        pass     
+        pass 
+    
+    def get(self,name):  
+        '''
+        '''  
+        rst = self._dbclient(self.db)[name].find()
+        for i in rst:
+            logger.info(i)
         
 if __name__ == '__main__':
     
@@ -32,5 +39,7 @@ if __name__ == '__main__':
             tool.addaccount(name,money)
         elif action == "getacchistory":
             tool.getacchistory(name)
+        elif action == "get":
+            tool.get(name)
         tool.disconnect()    
             

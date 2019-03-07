@@ -55,7 +55,7 @@ class MongoDB(object):
     def disconnect(self):
         '''断开数据库连接        
         '''
-        self._db_session.close()
+        self.client.close()
         return True
     
     def _dbclient(self,db):
