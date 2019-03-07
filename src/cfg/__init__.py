@@ -20,6 +20,12 @@ def getlogger():
 
 logger = getlogger()
 
+STOCK_IP_SETS = ['119.147.164.60','218.75.126.9', '115.238.90.165',
+                 '124.160.88.183', '60.12.136.250', '218.108.98.244', '218.108.47.69',
+                 '14.17.75.71', '180.153.39.51']
+
+FUTURE_IP_SETS = ['202.103.36.71','139,196,185,253','61.152.107.171','119.97.185.5']
+
 FILE_INCON = "files/incon.dat"
 FILE_TDXHY = "files/tdxhy.cfg"
 FILE_TDXZS = "files/tdxzs.cfg"

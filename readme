@@ -13,4 +13,7 @@ docker run --name stock_mongo -v /stockmock/data/db:/data/db  --network stockmoc
 
 
 ####启动撮合程序
-docker run -d --name stock_mock -e IP=stock_mongo --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/simulation.py
+docker run -d --name stock_mock -e IP=stock_mongo --restart unless-stopped --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/simulation.py
+
+####添加账号程序
+docker run -e IP=stock_mongo -e name=stock_mock_acc100  -e --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/addaccount.py

@@ -9,7 +9,7 @@ import tushare as ts
 import os
 import math
 from pytdx.hq import TdxHq_API
-from cfg import logger
+from cfg import logger,STOCK_IP_SETS
 
 class MongoDB(object):
     def __init__(self,ip="stock_mongo", #mongo db 数据库docker 容器名
@@ -24,9 +24,7 @@ class MongoDB(object):
         self.__authdb = authdb
         self.client = None
         self.trade_day = True
-        self.TDX_IP_SETS = ['119.147.164.60','218.75.126.9', '115.238.90.165',
-                 '124.160.88.183', '60.12.136.250', '218.108.98.244', '218.108.47.69',
-                 '14.17.75.71', '180.153.39.51']
+        self.TDX_IP_SETS = STOCK_IP_SETS
         self.api = TdxHq_API(heartbeat=True)
         self.today = None
         self.accounts = []
