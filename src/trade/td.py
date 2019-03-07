@@ -16,6 +16,8 @@ class trade(object):
         self.server = server
         self.account = UserID
         self.mock = mock
+        if mock:
+            self.mongodb = MongoDB()
     
     @property    
     def token(self):
@@ -27,12 +29,22 @@ class trade(object):
     
     def position(self):
         if self.mock:
-            pass
+            accountinfo = pd.DataFrame(self.mongodb.getaccount(self.account)) #获取账户总资金
+            accountinfo.loc[:,"index"] = "总资产"
+            accountinfo.loc[:,"人民币"] = accountinfo["total"]
+            accountinfo.set_index("index",inplace=True)
+            
+            holdlists = pd.DataFrame(self.mongodb.getholdlist(self.account)) #获取持仓股份信息
+            try:
+                holdlists.loc[:,"参考持股"] = holdlists["number"]
+                holdlists.set_index("code",inplace=True)
+            except:pass
         else:
             r=requests.get(self.server+'/positions', auth=HTTPBasicAuth(self.token, 'x'))
             data=json.loads(r.text)
             holdlists = pd.DataFrame(data["dataTable"]["rows"],columns=data["dataTable"]["columns"] )
             accountinfo = pd.DataFrame(data["subAccounts"])
+        
         return accountinfo,holdlists
     
     def _select_market_code(self,code):
@@ -66,22 +78,28 @@ class trade(object):
     def set_buy_price(self,stock):
         market = self.get_latest_price(stock)
         buy_price = market["bid1"]
-        return buy_price
+        ask1 = market["ask1"]
+        return buy_price,ask1
     
     def set_sell_price(self,stock):
         market = self.get_latest_price(stock)
         sell_price = market["ask1"]
-        return sell_price            
+        buy1 = market["bid1"]
+        return sell_price,buy1            
     
     def buy(self,stock,number):
         '''买入股票
         '''
-        price = self.set_buy_price(stock)
+        price,ask1 = self.set_buy_price(stock)
+        if ask1 <=0: #股票已经涨停，不买入，因为没法买入
+            return 
         postdata={"action":0,"priceType":0,"price":price,"amount":number,"symbol":stock}
-        self.order(postdata)    
+        self.order(postdata)
         
     def sell(self,stock,number):
-        price = self.set_sell_price(stock)
+        price,buy1 = self.set_sell_price(stock)
+        if buy1 <=0: #股票已经跌停，不卖出,因为没法卖出
+            return 
         postdata={"action":1,"priceType":0,"price":price,"amount":number,"symbol":stock}
         self.order(postdata)  
 
@@ -95,7 +113,7 @@ class trade(object):
            "symbol":"131810"}  #131810  204001
         '''
         if self.mock:
-            pass
+            self.mongodb.updateholdlist(self.account,postdata)
         else:
             r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
         return r.text
@@ -151,6 +169,8 @@ class MongoDB(object):
         self.__pwd = pwd
         self.__authdb = authdb
         self.client = None
+        self.db = "stock_mock"   #数据库
+        self.account_collection = "account"  #保存各个账户的当前资金信息
     
     @property    
     def info(self):
@@ -179,29 +199,47 @@ class MongoDB(object):
         '''
         return eval("self.client.{}".format(db))
 
-    def update(self,collection,strategy,data={},db="POSITION"):
-        '''更新每个策略对应的交易标的持仓数量
-           collection: 账号名字
-           strategy：策略
-           data:{"《交易标的》":"《数量》"}
-        '''
-        tm = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if len(data)>0:
-            bulk = self._dbclient(db)[collection].initialize_ordered_bulk_op()
-            for ins,number in data.items():
-                d = {"number":number,"status":True,"datetime":tm}
-                bulk.find({"name":strategy,"ins":ins}).upsert().update({"$set":d})
-            bulk.execute()
+    def getaccount(self,account):
+        clt = [i for i in self._dbclient(self.db)[self.account].find({"account":account})]
+        return clt
     
-    def set_false(self,collection,strategy,holdlist=[],drop=False,db="POSITION"):
-        '''把不在交易列表内的交易标的设置为非持有状态
-                   如果drop为True，则删除该记录
-        '''
-        self._dbclient(db)[collection].update_many({'name':strategy,'ins':{'$nin':holdlist}}, {"$set":{'status':False,'number':0}})
-    
-    def get(self,collection,holdlist,db="POSITION"):
-        '''获取每个策略对应的交易标的持仓数量
-        '''
-        filt = {'ins':{'$in':holdlist},"status":True}
-        rst = [i for i in self._dbclient(db)[collection].find(filt)]
+    def getholdlist(self,account):
+        collection = "holdlist_"+account
+        clt = self._dbclient(self.db)[collection].find({"account":account,"number":{"$gt":0}})
+        rst = [i for i in clt]
         return rst
+    
+    def updateholdlist(self,account,postdata):
+        
+        stock = postdata["symbol"]
+        collection = "holdlist_"+account
+        filt = {"code":stock}
+        
+        tm = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        dt = {"update_datetime":tm}
+        rst = self._dbclient(self.db)[collection].find(filt)[0]
+        if postdata["action"] == 0:#买入
+            changemoney = postdata["number"]*postdata["price"]
+            dt["cost"] = (rst["number"]*rst["cost"]+changemoney) /(rst["number"]+postdata["number"])
+            dt["number"] = rst["number"]+postdata["number"]
+        elif postdata["action"] == 1: #卖出
+            changemoney = -postdata["number"]*postdata["price"]
+            if rst["number"] == postdata["number"]:
+                dt["cost"] = 0
+            else:
+                dt["cost"] = (rst["number"]*rst["cost"]+changemoney)/(rst["number"]-postdata["number"])
+            
+            dt["number"] = rst["number"]-postdata["number"]  
+        
+        self._dbclient(self.db)[collection].update_one(filt,{"$set":dt}) #更新持仓股票
+        
+        filt = {"account":account}
+        self._dbclient(self.db)[self.account_collection].update_one(filt,{"$inc":{"rest":-changemoney}})#更新账户剩余资金
+        
+        return                    
+        
+        
+    
+
+

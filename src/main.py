@@ -16,7 +16,7 @@ import datetime
 import tushare as ts
 
 class SP(object):
-    def __init__(self,userid="account4",rate=1.2,products="1",limit=2,total=1000000):
+    def __init__(self,userid="account4",rate=1.2,products="1",limit=2,total=1000000,mock=True):
         if products == "1":
             self.products = {'880414': {'args': (3, 12, 90), 'stocklst': {}}, '880456': {'args': (6, 28, 40), 'stocklst': {}}, 
                              '880476': {'args': (5, 20, 90), 'stocklst': {}}, '880440': {'args': (4, 8, 85),  'stocklst': {}}, 
@@ -52,6 +52,7 @@ class SP(object):
         self.api = TdxHq_API(heartbeat=True)
         self.trader = None
         self.trading = False
+        self.mock = mock
         
         self.rate = rate #持仓杠杆率
         self.total = total #默认持仓资金
@@ -237,7 +238,7 @@ class SP(object):
         self.trading = True
         logger.info("try to create connect... ")
         self.connect()
-        self.trader = trade(UserID=self.userid,api=self.api)
+        self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock)
         logger.info("connect successful!")
         
         logger.info("initial account info...")
@@ -344,23 +345,25 @@ class SP(object):
 
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
-    account = os.environ.get('ACCOUNT',"account4")
-    rate = float(os.environ.get('RATE',3))
+    account = os.environ.get('ACCOUNT',"stock_mock_acc1")
+    rate = float(os.environ.get('RATE',"1.2"))
     products = os.environ.get('PRODUCTS',"1")
-    
-    s = SP(userid=account,rate=rate,products=products)
+    mock = os.environ.get('MOCK',True)
+    if mock == "False":mock = False
+
+    s = SP(userid=account,rate=rate,products=products,mock=mock)
     s.initial()
-    print(s.products)
-#     
-#     sched = BlockingScheduler()
-#     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9,21',minute='1',misfire_grace_time=60)
-#     sched.add_job(s.run,'cron', day_of_week='0-4', hour='0,9,10,14,21,22,23',minute='14,29,44,59',misfire_grace_time=60)
-#     sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='14,29',misfire_grace_time=60)
-#     sched.add_job(s.run,'cron', day_of_week='0-4', hour='13',minute='44,59',misfire_grace_time=60)
-#     sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='1',misfire_grace_time=60)
-#     sched.add_job(s.disconnect,'cron', day_of_week='1-5', hour='1',minute='1',misfire_grace_time=60)
-#     
-#     sched.start()
+     
+    sched = BlockingScheduler()
+    sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
+    
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,59',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='14,29',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='14,29,44,56',misfire_grace_time=60)
+    
+    sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
+     
+    sched.start()
     
     
     
