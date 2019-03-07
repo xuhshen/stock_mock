@@ -27,9 +27,10 @@ if __name__ == '__main__':
         logger.info("please add account name!!!! ")
     else:
         tool = Tool(ip=ip)
+        tool.connect()
         if action == "addaccount":
             tool.addaccount(name,money)
         elif action == "getacchistory":
             tool.getacchistory(name)
-            
+        tool.disconnect()    
             
