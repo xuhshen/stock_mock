@@ -162,14 +162,14 @@ class MongoDB(object):
         #更新账户当前值
         self._dbclient(self.db)[self.account_collection].update_one({"account":account},{"$set":rst})
         #更新账户历史记录值
-        dtm = datetime.datetime.strptime(tm,'%Y-%m-%d %H:%M')
+        dtm = datetime.datetime.now()
         minute = dtm.minute
-        if minute>50:
+        if minute>=50:
             dtm = dtm.replace(hour=dtm.hour+1,minute=0) 
         else:
-            minute = int(minute/10)+10 
+            minute = int(minute/10)*10+10 
             dtm = dtm.replace(minute=minute) 
-        self._dbclient(self.db)[self.account_his_collection].update_one({"account":account,"date":dtm},{"$set":rst},upsert=True)
+        self._dbclient(self.db)[self.account_his_collection].update_one({"account":account,"date":dtm.strftime("%Y-%m-%d %H:%M")},{"$set":rst},upsert=True)
     
     def run(self):
         if not self.trade_day: #交易日，更新账户信息
