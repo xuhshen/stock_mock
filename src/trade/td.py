@@ -114,7 +114,8 @@ class trade(object):
            "symbol":"131810"}  #131810  204001
         '''
         if self.mock:
-            self.mongodb.updateholdlist(self.account,postdata)
+            self.mongodb.updateholdlist(self.account,postdata) #更新持仓信息
+            self.mongodb.add_operate_history(self.account,postdata) #添加操作记录
         else:
             r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
             return r.text
@@ -173,6 +174,7 @@ class MongoDB(object):
         self.client = None
         self.db = "stock_mock"   #数据库
         self.account_collection = "account"  #保存各个账户的当前资金信息
+        self.his_collection = "operate_history"  #保存各个账户的当前资金信息
     
     @property    
     def info(self):
@@ -230,7 +232,7 @@ class MongoDB(object):
             dt["cost"] = (rst["number"]*rst["cost"]+changemoney) /(rst["number"]+postdata["amount"])
             dt["number"] = rst["number"]+postdata["amount"]
         elif postdata["action"] == 1: #卖出
-            changemoney = -postdata["amount"]*postdata["price"]
+            changemoney = -postdata["amount"]*postdata["price"]*0.9985 #卖出时按照千分之一点五计算手续费
             if rst["number"] == postdata["amount"]:
                 dt["cost"] = 0
             else:
@@ -245,7 +247,10 @@ class MongoDB(object):
         
         return                    
         
-        
-    
+    def add_operate_history(self,account,postdata): #添加操作记录  
+        data = postdata
+        data["account"] = account
+        data["datetime"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._dbclient(self.db)[self.his_collection].insert_one(data)
 
 

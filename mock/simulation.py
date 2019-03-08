@@ -152,14 +152,24 @@ class MongoDB(object):
             bulk.execute()
         holdvalue = self._dbclient(self.db)[hold_collection].aggregate([{ "$group": { "_id": None, 
                                                                                   "total": { "$sum": { "$multiply": [ "$price", "$number"]}}}}])
-        holdvalue = [i for i in holdvalue][0]["total"]
+        try:
+            holdvalue = [i for i in holdvalue][0]["total"]
+        except:
+            holdvalue = 0
         rst = self._dbclient(self.db)[self.account_collection].find({"account":account},{"_id":0})[0]
         rst["total"] = rst["rest"] + holdvalue
         rst["hold"] = holdvalue
         #更新账户当前值
         self._dbclient(self.db)[self.account_collection].update_one({"account":account},{"$set":rst})
         #更新账户历史记录值
-        self._dbclient(self.db)[self.account_his_collection].update_one({"account":account,"date":self.today},{"$set":rst},upsert=True)
+        dtm = datetime.datetime.strptime(tm,'%Y-%m-%d %H:%M')
+        minute = dtm.minute
+        if minute>50:
+            dtm = dtm.replace(hour=dtm.hour+1,minute=0) 
+        else:
+            minute = int(minute/10)+10 
+            dtm = dtm.replace(minute=minute) 
+        self._dbclient(self.db)[self.account_his_collection].update_one({"account":account,"date":dtm},{"$set":rst},upsert=True)
     
     def run(self):
         if not self.trade_day: #交易日，更新账户信息
