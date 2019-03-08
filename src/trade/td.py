@@ -38,6 +38,7 @@ class trade(object):
             holdlists = pd.DataFrame(self.mongodb.getholdlist(self.account)) #获取持仓股份信息
             try:
                 holdlists.loc[:,"参考持股"] = holdlists["number"]
+                holdlists.loc[:,"证券代码"] = holdlists["code"]
                 holdlists.set_index("code",inplace=True)
             except:pass
         else:
@@ -71,8 +72,7 @@ class trade(object):
 #                   "ask5","ask_vol5",
 #                   "last_close"]
         market = self._select_market_code(code)
-#         api.get_security_quotes([(0, '000001'), (1, '600300')])
-        rst = self.api.get_security_quotes(market, code)[0]
+        rst = self.api.get_security_quotes([(market, code)])[0]
         
         return rst
     
@@ -117,7 +117,8 @@ class trade(object):
             self.mongodb.updateholdlist(self.account,postdata)
         else:
             r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
-        return r.text
+            return r.text
+        return 
 
     def cancelorder(self,orderid=[],isall=True):
         '''撤单
@@ -206,7 +207,7 @@ class MongoDB(object):
     
     def getholdlist(self,account):
         collection = "holdlist_"+account
-        clt = self._dbclient(self.db)[collection].find({"account":account,"number":{"$gt":0}})
+        clt = self._dbclient(self.db)[collection].find({"number":{"$gt":0}})
         rst = [i for i in clt]
         return rst
     
@@ -219,21 +220,25 @@ class MongoDB(object):
         tm = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         dt = {"update_datetime":tm}
-        rst = self._dbclient(self.db)[collection].find(filt)[0]
+        try:
+            rst = self._dbclient(self.db)[collection].find(filt)[0]
+        except:
+            rst = {"cost":0,"number":0}
+            
         if postdata["action"] == 0:#买入
-            changemoney = postdata["number"]*postdata["price"]
-            dt["cost"] = (rst["number"]*rst["cost"]+changemoney) /(rst["number"]+postdata["number"])
-            dt["number"] = rst["number"]+postdata["number"]
+            changemoney = postdata["amount"]*postdata["price"]
+            dt["cost"] = (rst["number"]*rst["cost"]+changemoney) /(rst["number"]+postdata["amount"])
+            dt["number"] = rst["number"]+postdata["amount"]
         elif postdata["action"] == 1: #卖出
-            changemoney = -postdata["number"]*postdata["price"]
-            if rst["number"] == postdata["number"]:
+            changemoney = -postdata["amount"]*postdata["price"]
+            if rst["number"] == postdata["amount"]:
                 dt["cost"] = 0
             else:
-                dt["cost"] = (rst["number"]*rst["cost"]+changemoney)/(rst["number"]-postdata["number"])
+                dt["cost"] = (rst["number"]*rst["cost"]+changemoney)/(rst["number"]-postdata["amount"])
             
-            dt["number"] = rst["number"]-postdata["number"]  
+            dt["number"] = rst["number"]-postdata["amount"]  
         
-        self._dbclient(self.db)[collection].update_one(filt,{"$set":dt}) #更新持仓股票
+        self._dbclient(self.db)[collection].update_one(filt,{"$set":dt},upsert=True) #更新持仓股票
         
         filt = {"account":account}
         self._dbclient(self.db)[self.account_collection].update_one(filt,{"$inc":{"rest":-changemoney}})#更新账户剩余资金

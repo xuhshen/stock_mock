@@ -6,7 +6,7 @@ Created on 2018年9月3日
 '''商品组合交易模拟 15min 交易周期
 '''
 from pytdx.hq import TdxHq_API
-from cfg import logger,FILE_INCON,FILE_TDXHY,FILE_TDXZS,HY_WEIGHT
+from cfg import logger,FILE_INCON,FILE_TDXHY,FILE_TDXZS,HY_WEIGHT,STOCK_IP_SETS
 import gevent
 from gevent import monkey;monkey.patch_all()
 from trade import trade
@@ -56,9 +56,7 @@ class SP(object):
         
         self.rate = rate #持仓杠杆率
         self.total = total #默认持仓资金
-        self.TDX_IP_SETS = ['119.147.164.60','218.75.126.9', '115.238.90.165',
-                 '124.160.88.183', '60.12.136.250', '218.108.98.244', '218.108.47.69',
-                 '14.17.75.71', '180.153.39.51']
+        self.TDX_IP_SETS = STOCK_IP_SETS
         
         self.file_incon = FILE_INCON
         self.file_tdxhy = FILE_TDXHY
@@ -214,7 +212,7 @@ class SP(object):
             for i in limit_stocks:
                 market = func(i[0])
                 price = self.api.get_security_bars(4,market,i[0],0,1)[0]["close"]
-                number = int(self.permoney*i[1]/total/price/100)
+                number = int(self.permoney*i[1]/total/price/100)*100
                 self.products[code]["stocklst"][i[0]] = number
         return self.products
 
@@ -251,7 +249,6 @@ class SP(object):
     def handledata(self,df,args=[]):
         df.loc[:,"number"] = range(df.shape[0]) 
         s,m,l = args
-        debuginfo = []
         for i in args:#5 15 60 D
             key = str(5*i)
             df.loc[:,key+"high"] = df["high"].rolling(i).max()
@@ -271,11 +268,11 @@ class SP(object):
             df[key+'lmark'].fillna(0,inplace=True)
             
             df.loc[:,key+'UP'] = df[key+'hmark'] >= df[key+'lmark']
-            debuginfo.append({key+'hmark':df.iloc[-1][key+'hmark'],key+'lmark':df.iloc[-1][key+'lmark']})
+#             debuginfo.append({key+'hmark':df.iloc[-1][key+'hmark'],key+'lmark':df.iloc[-1][key+'lmark']})
             
         df.fillna(method="ffill",inplace=True)
         df.dropna(inplace=True)
-        logger.info("trademessage:{}".format(debuginfo))
+#         logger.info("trademessage:{}".format(debuginfo))
         result = df.iloc[-1][str(5*l)+"UP"] >0    
         result |= (df.iloc[-1][str(5*l)+"UP"]>0)&(df.iloc[-1][str(5*m)+"UP"]>0) 
         result |= (df.iloc[-1][str(5*l)+"UP"]<=0)&(df.iloc[-1][str(5*m)+"UP"]>0)&(df.iloc[-1][str(5*s)+"UP"]>0)    
@@ -287,16 +284,25 @@ class SP(object):
             if not director: number = 0 #空信号,清仓
             
             #判断现有持仓
+#             h_number = self.hd_df.ix[stock]["参考持股"]
             try:
                 h_number = self.hd_df.ix[stock]["参考持股"]
+                 
             except:
                 h_number = 0
         
             #补仓差
-            if number>h_number:
-                self.buy(stock,number-h_number)
-            elif number<h_number:
-                self.sell(stock,h_number-number)
+            cangcha = int((number-h_number)/100)*100
+            
+            if h_number>0 and abs(cangcha)/h_number<0.1: #如果有持仓，同时仓差小于10% 不进行更改，为了处理频繁加减仓达到问题
+                return 
+                
+            if cangcha>0:
+                logger.info("buy code:{}, number:{}".format(stock,number-h_number))
+                self.buy(stock,cangcha)
+            elif cangcha<0:
+                logger.info("sell code:{}, number:{}".format(stock,h_number-number))
+                self.sell(stock,-cangcha)
     
     def buy(self,stock,number):
         self.trader.buy(stock, number)
@@ -323,8 +329,9 @@ class SP(object):
         '''
         self.trader.cancelorder() #先尝试撤单
         _,holdlists = self.trader.position()
-        self.hd_df = holdlists[["证券代码","参考持股"]]
-        self.hd_df.set_index("证券代码",inplace=True)
+        self.hd_df = holdlists
+        if holdlists.shape[0]>0:
+            self.hd_df.set_index("证券代码",inplace=True)
         return self.hd_df
     
     def run(self):
@@ -337,6 +344,7 @@ class SP(object):
         rst = {}
         for idx in list(self.products.keys()):
             director = self.handledata(self.getdata(idx,market=1),self.products[idx]["args"]) #用指数出信号
+            logger.info("trademessage: block:{}, director:{}".format(idx,director))
             self.sync(idx,director)
             rst[idx] = {"up":director,"number":self.products[idx]["stocklst"],"product":idx}
         
@@ -346,23 +354,24 @@ class SP(object):
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
     account = os.environ.get('ACCOUNT',"stock_mock_acc1")
-    rate = float(os.environ.get('RATE',"1.2"))
+#     account = os.environ.get('ACCOUNT',"test")
+    rate = float(os.environ.get('RATE',"1"))
     products = os.environ.get('PRODUCTS',"1")
     mock = os.environ.get('MOCK',True)
     if mock == "False":mock = False
 
     s = SP(userid=account,rate=rate,products=products,mock=mock)
     s.initial()
-     
+#     s.run()
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
-    
+     
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,59',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='14,29',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='14,29,44,56',misfire_grace_time=60)
-    
-    sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
      
+    sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
+      
     sched.start()
     
     
