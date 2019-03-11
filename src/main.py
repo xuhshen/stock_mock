@@ -273,7 +273,7 @@ class SP(object):
         df.fillna(method="ffill",inplace=True)
         df.dropna(inplace=True)
 #         logger.info("trademessage:{}".format(debuginfo))
-        result = df.iloc[-1][str(5*l)+"UP"] >0    
+        result = (df.iloc[-1][str(5*l)+"UP"] >0)&(df.iloc[-1][str(5*s)+"UP"]>0)    
         result |= (df.iloc[-1][str(5*l)+"UP"]>0)&(df.iloc[-1][str(5*m)+"UP"]>0) 
         result |= (df.iloc[-1][str(5*l)+"UP"]<=0)&(df.iloc[-1][str(5*m)+"UP"]>0)&(df.iloc[-1][str(5*s)+"UP"]>0)    
         return result
