@@ -29,7 +29,7 @@ if __name__ == '__main__':
         logger.info("buy: {} number:{}".format(stock,number))
         trader.buy(stock, number)
     
-    for stock,number in buylist:
+    for stock,number in selllist:
         try:
             h_number = holdlists.ix[stock]["参考持股"]
         except:
