@@ -27,7 +27,7 @@ if __name__ == '__main__':
     
     for stock,number in buylist:
         logger.info("buy: {} number:{}".format(stock,number))
-        trader.buy(stock, number)
+        trader.buy(stock, int(number))
     
     for stock,number in selllist:
         try:
@@ -38,9 +38,9 @@ if __name__ == '__main__':
         if number >=h_number:
             logger.info("holdnumber is:{}".format(h_number)) 
             logger.info("sell: {} number:{}".format(stock,h_number))
-            trader.sell(stock, h_number)
+            trader.sell(stock, int(h_number))
         else:
             logger.info("sell: {} number:{}".format(stock,number))
-            trader.sell(stock, number)
+            trader.sell(stock, int(number))
     
     
