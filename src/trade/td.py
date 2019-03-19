@@ -9,6 +9,7 @@ from requests.auth import HTTPBasicAuth
 import pandas as pd
 from pymongo import MongoClient 
 import datetime
+from cfg import logger
 
 class trade(object):
     def __init__(self,UserID="xuhshen",api=None,server="http://192.168.0.100:5000",mock=True):
@@ -114,6 +115,7 @@ class trade(object):
            "symbol":"131810"}  #131810  204001
         '''
         if self.mock:
+            logger.info(postdata)
             self.mongodb.updateholdlist(self.account,postdata) #更新持仓信息
             self.mongodb.add_operate_history(self.account,postdata) #添加操作记录
         else:
@@ -163,7 +165,7 @@ class trade(object):
 class MongoDB(object):
     def __init__(self,
                     ip="stock_mongo", #mongo db 数据库docker 容器名
-#                      ip="192.168.0.106",
+#                     ip="192.168.0.106",
                      port=27017, 
                      user_name=None, 
                      pwd=None,
