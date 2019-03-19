@@ -161,7 +161,9 @@ class trade(object):
 #         self.order(postdata)
         
 class MongoDB(object):
-    def __init__(self,ip="stock_mongo", #mongo db 数据库docker 容器名
+    def __init__(self,
+                    ip="stock_mongo", #mongo db 数据库docker 容器名
+#                      ip="192.168.0.106",
                      port=27017, 
                      user_name=None, 
                      pwd=None,
