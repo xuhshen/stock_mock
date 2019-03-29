@@ -93,15 +93,19 @@ class trade(object):
         '''买入股票
         '''
         price,ask1 = self.set_buy_price(stock)
-        if ask1 <=0: #股票已经涨停，不买入，因为没法买入
+        if ask1 <=0 : #股票已经涨停，不买入，因为没法买入
             return 
+        if price ==0:
+            price = ask1 # 股价已经跌停，按卖方价买入
         postdata={"action":0,"priceType":0,"price":price,"amount":number,"symbol":stock}
         self.order(postdata)
         
     def sell(self,stock,number):
         price,buy1 = self.set_sell_price(stock)
-        if buy1 <=0: #股票已经跌停，不卖出,因为没法卖出
+        if buy1 <=0 : #股票已经跌停，不卖出,因为没法卖出,或者股价已经涨停，不卖
             return 
+        if price == 0:
+            price = buy1 # 股价已经涨停，按买方价卖出
         postdata={"action":1,"priceType":0,"price":price,"amount":number,"symbol":stock}
         self.order(postdata)  
 
