@@ -24,6 +24,8 @@ docker run -e IP=stock_mongo -e name=account -e action=get  --network stockmock-
 ####启动股票策略
 docker run  -d --name stock_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc1  -e RATE=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
 
+####启动500ETF策略
+docker run  -d --name 500ETF_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc2  -e NUMBER=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
 
 
 

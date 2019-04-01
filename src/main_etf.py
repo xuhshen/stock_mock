@@ -68,7 +68,7 @@ class SP(object):
         price = self.api.get_security_quotes([ (1, '510500')])[0]["last_close"]
         index_price = self.api.get_security_quotes([ (1, '000905')])[0]["last_close"]
         
-        self.products["000905"]["stocklst"]["510500"] = int(index_price*self.number*self.permoney/price/10)*100
+        self.products["000905"]["stocklst"]["510500"] = int(index_price*self.number*self.permoney/price/100)*100
         
 
     def judgetradeday(self,):
@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
     s = SP(userid=account,number=number,mock=mock)
     s.initial()
-#     s.run()
+    s.run()
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
       
