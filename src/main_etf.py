@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
     s = SP(userid=account,number=number,mock=mock)
     s.initial()
-    s.run()
+#     s.run()
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
       
