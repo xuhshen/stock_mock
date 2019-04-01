@@ -17,9 +17,9 @@ class SP(object):
         ''' 根据实际账户资金，以股指1手为基本对冲单位进行配置。
         '''
         self.products = {
-                        '000905': {'args': (1, 2, 21), 'stocklst': {"510500":0}}
+                        '000905': {'args': (3, 6, 65), 'stocklst': {"510500":0}}
                          }
-        self.datatype = 1
+        self.datatype = 0
         self.userid = userid
         self.api = TdxHq_API(heartbeat=True)
         self.trader = None
@@ -39,7 +39,7 @@ class SP(object):
             except:
                 pass
     
-    def getdata(self,product,market=1,number=5000,pn=400):
+    def getdata(self,product,market=1,number=10000,pn=400):
         data = []
         for i in range(int(number/pn)+1):
             temp = self.api.get_index_bars(self.datatype, market, product, (int(number/pn)-i)*pn,pn)
@@ -217,9 +217,9 @@ if __name__ == '__main__':
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
       
-    sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,59',misfire_grace_time=60)
-    sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='14,29',misfire_grace_time=60)
-    sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='14,29,44,56',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,49,54,59',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='4,9,14,19,24,29',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='4,9,14,19,24,29,34,39,44,49,54,59',misfire_grace_time=60)
       
     sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
        
