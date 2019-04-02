@@ -133,8 +133,8 @@ class SP(object):
     def sync(self,idx,director=True):
         stocks = self.products[idx]["stocklst"]
         for stock,number in stocks.items():
-            if not director: number = number #空信号,清仓
-            else: number = 3*number
+            if not director: number = 2*number #空信号,清仓
+            else: number = 4*number
             
             #判断现有持仓
 #             h_number = self.hd_df.ix[stock]["参考持股"]
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
       
-    sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,49,54,59',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='34,39,44,49,54,59',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='4,9,14,19,24,29',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='4,9,14,19,24,29,34,39,44,49,54,59',misfire_grace_time=60)
       
