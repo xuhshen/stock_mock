@@ -21,11 +21,15 @@ docker run -e IP=stock_mongo -e name=stock_mock_acc100   --network stockmock-net
 ####查看数据库表记录
 docker run -e IP=stock_mongo -e name=account -e action=get  --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/addaccount.py
 
-####启动股票策略
+####启动股票策略(模拟)
 docker run  -d --name stock_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc1  -e RATE=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
 
-####启动500ETF策略
-docker run  -d --name 500ETF_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc2  -e NUMBER=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
+####启动500ETF策略(模拟)
+docker run  -d --name 500ETF_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc2  -e NUMBER=2 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
 
+##############################################################################################
+实盘:
 
-
+ETF 策略: 
+  docker run  -d --name 500ETF_strategy_account -e mock=False -e ACCOUNT=account1  -e NUMBER=0.001 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
+  

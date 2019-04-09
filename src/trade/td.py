@@ -16,6 +16,9 @@ class trade(object):
         self.api = api
         self.server = server
         self.account = UserID
+        self.gznhg = "204001" #一天期国债逆回购代码
+        self.qyznhg = "131810" #一天期企业债逆回购代码
+        
         self.mock = mock
         if mock:
             self.mongodb = MongoDB()
@@ -38,6 +41,8 @@ class trade(object):
             
             holdlists = pd.DataFrame(self.mongodb.getholdlist(self.account)) #获取持仓股份信息
             try:
+                holdlists.loc[:,"证券数量"] = holdlists["number"]
+                holdlists.loc[:,"可卖数量"] = holdlists["number"]
                 holdlists.loc[:,"参考持股"] = holdlists["number"]
                 holdlists.loc[:,"证券代码"] = holdlists["code"]
                 holdlists.set_index("code",inplace=True)
@@ -123,6 +128,8 @@ class trade(object):
             self.mongodb.updateholdlist(self.account,postdata) #更新持仓信息
             self.mongodb.add_operate_history(self.account,postdata) #添加操作记录
         else:
+            if postdata["symbol"] in ["510500"]:postdata["price"] *= 0.1 #etf调整价格
+                
             r=requests.post(self.server+'/orders',json=postdata,auth=HTTPBasicAuth(self.token, 'x'))
             return r.text
         return 
@@ -141,30 +148,30 @@ class trade(object):
             except:pass
         return 
 
-#     def autobuy(self):
-#         '''自动比较利率购买逆回购
-#         '''
-#         gzrate = self.get_latest_price(self.gznhg).ix[0,"bid1"]*0.1
-#         qyzrate = self.get_latest_price(self.qyznhg).ix[0,"bid1"]*0.1
-#         account,_ = self.get_position()
-#         restmoney = account.ix["可用"]["人民币"]
-#         if gzrate > qyzrate:
-#             self.buygznhg(restmoney,gzrate)
-#             self.buyqyznhg(restmoney%100000,qyzrate)
-#         else: 
-#             self.buyqyznhg(restmoney,qyzrate)
-    
-#     def buygznhg(self,money,price):
-#         '''自动买入一天期国债逆回购'''
-#         num = int(money/100000)*1000 
-#         postdata = {"action":3,"priceType":0,"price":price,"amount":num,"symbol":self.gznhg}
-#         self.order(postdata)
-#         
-#     def buyqyznhg(self,money,price):
-#         '''自动买入一天期企业债逆回购'''
-#         num = int(money/1000)*10
-#         postdata = {"action":3,"priceType":0,"price":price,"amount":num,"symbol":self.qyznhg}
-#         self.order(postdata)
+    def autobuy(self):
+        '''自动比较利率购买逆回购
+        '''
+        gzrate = self.get_latest_price(self.gznhg).ix[0,"bid4"]*0.1
+        qyzrate = self.get_latest_price(self.qyznhg).ix[0,"bid4"]*0.1
+        account,_ = self.get_position()
+        restmoney = account.ix["可用"]["人民币"]
+        if gzrate > qyzrate:
+            self.buygznhg(restmoney,gzrate)
+            self.buyqyznhg(restmoney%100000,qyzrate)
+        else: 
+            self.buyqyznhg(restmoney,qyzrate)
+     
+    def buygznhg(self,money,price):
+        '''自动买入一天期国债逆回购'''
+        num = int(money/100000)*1000 
+        postdata = {"action":3,"priceType":0,"price":price,"amount":num,"symbol":self.gznhg}
+        self.order(postdata)
+         
+    def buyqyznhg(self,money,price):
+        '''自动买入一天期企业债逆回购'''
+        num = int(money/1000)*10
+        postdata = {"action":3,"priceType":0,"price":price,"amount":num,"symbol":self.qyznhg}
+        self.order(postdata)
         
 class MongoDB(object):
     def __init__(self,

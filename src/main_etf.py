@@ -9,11 +9,12 @@ from pytdx.hq import TdxHq_API
 from cfg import logger,STOCK_IP_SETS
 from trade import trade
 import os
+import numpy as np
 import datetime
 import tushare as ts
 
 class SP(object):
-    def __init__(self,userid="account4",number=2,mock=True):
+    def __init__(self,userid="account1",number=2,mock=True,server="http://192.168.118.1:65000"):
         ''' 根据实际账户资金，以股指1手为基本对冲单位进行配置。
         '''
         self.products = {
@@ -27,9 +28,11 @@ class SP(object):
         self.mock = mock
         self.permoney = 200 #指数一个点对应的金额
         self.number  = number #指数的倍数
+        self.server = server
         
         self.TDX_IP_SETS = STOCK_IP_SETS
-        
+        if mock:self.judgerate = 100
+        else:self.judgerate = 10
     
     def connect(self):
         for ip in self.TDX_IP_SETS:
@@ -51,7 +54,10 @@ class SP(object):
                         logger.info("record not reach the limit!")
                     else:
                         break    
-            data += temp
+            try:
+                data += temp
+            except:self.connect()
+                
         df = self.api.to_df(data)[["open","close","high","low","datetime"]]
         df.set_index("datetime",inplace=True,drop=False)
         return df
@@ -68,7 +74,7 @@ class SP(object):
         price = self.api.get_security_quotes([ (1, '510500')])[0]["last_close"]
         index_price = self.api.get_security_quotes([ (1, '000905')])[0]["last_close"]
         
-        self.products["000905"]["stocklst"]["510500"] = int(index_price*self.number*self.permoney/price/100)*100
+        self.products["000905"]["stocklst"]["510500"] = int(index_price*self.number*self.permoney/price/self.judgerate)*100
         
 
     def judgetradeday(self,):
@@ -91,7 +97,7 @@ class SP(object):
         self.trading = True
         logger.info("try to create connect... ")
         self.connect()
-        self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock)
+        self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock,server=self.server)
         logger.info("connect successful!")
         
         self.set_number() #设置手数
@@ -137,9 +143,8 @@ class SP(object):
             else: number = 4*number
             
             #判断现有持仓
-#             h_number = self.hd_df.ix[stock]["参考持股"]
             try:
-                h_number = self.hd_df.ix[stock]["参考持股"]
+                h_number = self.hd_df.ix[stock]["证券数量"]
                  
             except:
                 h_number = 0
@@ -155,7 +160,8 @@ class SP(object):
                 self.buy(stock,cangcha)
             elif cangcha<0:
                 logger.info("sell code:{}, number:{}".format(stock,h_number-number))
-                self.sell(stock,-cangcha)
+                lastholdnumber = self.hd_df.ix[stock]["可卖数量"]
+                self.sell(stock,min(-cangcha,lastholdnumber))
     
     def buy(self,stock,number):
         self.trader.buy(stock, number)
@@ -185,6 +191,7 @@ class SP(object):
         self.hd_df = holdlists
         if holdlists.shape[0]>0:
             self.hd_df.set_index("证券代码",inplace=True)
+            self.hd_df.index = self.hd_df.index.astype(np.str)
         return self.hd_df
     
     def run(self):
@@ -202,16 +209,25 @@ class SP(object):
             rst[idx] = {"up":director,"number":self.products[idx]["stocklst"],"product":idx}
         
         logger.info("lastest position status:{}".format(rst))
-            
+    
+    def nhg(self):
+        '''尾盘自动进行逆回购
+        '''        
+        if not self.mock:
+            self.trader.autobuy()
 
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
     account = os.environ.get('ACCOUNT',"stock_mock_acc2")
     number = float(os.environ.get('NUMBER',"2"))
     mock = os.environ.get('MOCK',True)
+    
+    server=os.environ.get('SERVER',"http://192.168.0.100:65000")  
+    
     if mock == "False":mock = False
 
-    s = SP(userid=account,number=number,mock=mock)
+    s = SP(userid=account,number=number,mock=mock,server=server)
+#     s = SP(userid="account1",number=0.001,mock=False,server=server)
     s.initial()
 #     s.run()
     sched = BlockingScheduler()
@@ -220,6 +236,8 @@ if __name__ == '__main__':
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='34,39,44,49,54,59',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='4,9,14,19,24,29',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='4,9,14,19,24,29,34,39,44,49,54,59',misfire_grace_time=60)
+    
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='14',minute='50',misfire_grace_time=60) 
       
     sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
        

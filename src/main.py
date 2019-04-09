@@ -12,11 +12,12 @@ from gevent import monkey;monkey.patch_all()
 from trade import trade
 import os
 import re
+import numpy as np
 import datetime
 import tushare as ts
 
 class SP(object):
-    def __init__(self,userid="account4",rate=1.2,products="1",limit=2,total=1000000,mock=True):
+    def __init__(self,userid="account4",rate=1.2,products="1",limit=2,total=1000000,mock=True,server="http://192.168.118.1:65000"):
         if products == "1":
             self.products = {'880414': {'args': (3, 12, 90), 'stocklst': {}}, '880456': {'args': (6, 28, 40), 'stocklst': {}}, 
                              '880476': {'args': (5, 20, 90), 'stocklst': {}}, '880440': {'args': (4, 8, 85),  'stocklst': {}}, 
@@ -46,6 +47,22 @@ class SP(object):
                              '880446': {'args': (3, 8, 45),  'stocklst': {}}, '880452': {'args': (3, 32, 90), 'stocklst': {}}, 
                              '880455': {'args': (5, 6, 20),  'stocklst': {}}, '880399': {'args': (3, 8, 85),  'stocklst': {}}, 
                              '880330': {'args': (5, 12, 80), 'stocklst': {}}, '880489': {'args': (3, 18, 190),'stocklst': {}}}
+        elif products == "2": #资金比较少是，选择配置部分行业
+            self.products = {'880414': {'args': (3, 12, 90), 'stocklst': {}}, '880456': {'args': (6, 28, 40), 'stocklst': {}}, 
+                            '880476': {'args': (5, 20, 90), 'stocklst': {}}, '880440': {'args': (4, 8, 85),  'stocklst': {}}, 
+                            '880424': {'args': (4, 16, 110),'stocklst': {}}, '880448': {'args': (3, 14, 60), 'stocklst': {}}, 
+                            '880454': {'args': (4, 8, 85),  'stocklst': {}}, '880493': {'args': (3, 24, 55), 'stocklst': {}}, 
+                             '880344': {'args': (4, 4, 30),  'stocklst': {}}, '880301': {'args': (6, 20, 30), 'stocklst': {}}, 
+                             '880464': {'args': (4, 14, 50), 'stocklst': {}}, '880459': {'args': (3, 16, 80), 'stocklst': {}}, 
+                             '880380': {'args': (5, 22, 70), 'stocklst': {}}, '880472': {'args': (3, 32, 170),'stocklst': {}}, 
+                             '880421': {'args': (3, 16, 45), 'stocklst': {}}, '880471': {'args': (4, 12, 40), 'stocklst': {}}, 
+                             '880453': {'args': (6, 14, 30), 'stocklst': {}}, '880350': {'args': (4, 26, 30), 'stocklst': {}}, 
+                             '880447': {'args': (5, 20, 170),'stocklst': {}}, '880351': {'args': (3, 6, 65),  'stocklst': {}}, 
+                             '880390': {'args': (3, 14, 65), 'stocklst': {}}, '880406': {'args': (4, 16, 50), 'stocklst': {}}, 
+                             '880305': {'args': (3, 14, 95), 'stocklst': {}}, '880492': {'args': (3, 30, 105),'stocklst': {}}, 
+                             '880387': {'args': (5, 20, 70), 'stocklst': {}}, '880418': {'args': (4, 16, 100),'stocklst': {}},
+                             }
+        self.server = server
         self.datatype = 1
         self.userid = userid
         self.limit = limit
@@ -206,6 +223,8 @@ class SP(object):
         weight = self.get_weight()
         for v in self.get_tdxhy_list().values():
             code = str(v["code"])
+            if not self.products.__contains__(code):continue
+            
             stocks = [(i,weight[i]) for i in v["stocklist"]]
             limit_stocks = sorted(stocks,key=lambda x:x[1],reverse=True)[:self.limit]
             total = sum([i[1] for i  in limit_stocks])
@@ -236,7 +255,7 @@ class SP(object):
         self.trading = True
         logger.info("try to create connect... ")
         self.connect()
-        self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock)
+        self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock,server=self.server)
         logger.info("connect successful!")
         
         logger.info("initial account info...")
@@ -284,12 +303,15 @@ class SP(object):
             if not director: number = 0 #空信号,清仓
             
             #判断现有持仓
-#             h_number = self.hd_df.ix[stock]["参考持股"]
             try:
-                h_number = self.hd_df.ix[stock]["参考持股"]
+#                 h_number = self.hd_df.ix[stock]["参考持股"]
+                if self.mock: code = stock
+                else:code = str(int(stock))
+                h_number = self.hd_df.ix[code]["证券数量"]
                  
             except:
                 h_number = 0
+            logger.info("{},{},{}".format(stock,h_number,number))
         
             #补仓差
             cangcha = int((number-h_number)/100)*100
@@ -301,8 +323,10 @@ class SP(object):
                 logger.info("buy code:{}, number:{}".format(stock,number-h_number))
                 self.buy(stock,cangcha)
             elif cangcha<0:
-                logger.info("sell code:{}, number:{}".format(stock,h_number-number))
-                self.sell(stock,-cangcha)
+                couldsell = self.hd_df.ix[code]["可卖数量"]
+                logger.info("sell code:{}, number:{},couldsell:{}".format(stock,h_number-number,couldsell))
+                if couldsell >0:
+                    self.sell(stock,min(-cangcha,couldsell))
     
     def buy(self,stock,number):
         self.trader.buy(stock, number)
@@ -332,6 +356,7 @@ class SP(object):
         self.hd_df = holdlists
         if holdlists.shape[0]>0:
             self.hd_df.set_index("证券代码",inplace=True)
+            self.hd_df.index = self.hd_df.index.astype(np.str)
         return self.hd_df
     
     def run(self):
@@ -353,14 +378,17 @@ class SP(object):
 
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
-    account = os.environ.get('ACCOUNT',"stock_mock_acc1")
+    account = os.environ.get('ACCOUNT',"account2")
 #     account = os.environ.get('ACCOUNT',"test")
-    rate = float(os.environ.get('RATE',"1"))
-    products = os.environ.get('PRODUCTS',"1")
+    rate = float(os.environ.get('RATE',"0.2"))
+    products = os.environ.get('PRODUCTS',"2")
+    server=os.environ.get('SERVER',"http://192.168.0.100:65000")
+    
     mock = os.environ.get('MOCK',True)
     if mock == "False":mock = False
 
-    s = SP(userid=account,rate=rate,products=products,mock=mock)
+    s = SP(userid=account,rate=rate,products=products,mock=mock,server=server)
+#     s = SP(userid=account,rate=rate,products=products,mock=False,server=server)
     s.initial()
 #     s.run()
     sched = BlockingScheduler()
