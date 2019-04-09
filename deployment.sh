@@ -39,6 +39,8 @@ docker run -d --name stock_strategy_35204099 -e IP=stock_mongo -e ACCOUNT=accoun
 docker rm -f 500ETF_strategy_35200453 
 docker run  -d --name 500ETF_strategy_35200453 -e IP=stock_mongo -e ACCOUNT=account1  -e NUMBER=0.001 -e MOCK=False --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
 
+docker rm -f 500ETF_strategy_35204819 
+docker run  -d --name 500ETF_strategy_35204819 -e IP=stock_mongo -e ACCOUNT=account3  -e NUMBER=0.001 -e MOCK=False --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main_etf.py
 
 
 
