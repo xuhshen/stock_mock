@@ -94,7 +94,7 @@ class trade(object):
         buy1 = market["bid1"]
         return sell_price,buy1            
     
-    def buy(self,stock,number):
+    def buy(self,stock,number,jump=0):
         '''买入股票
         '''
         price,ask1 = self.set_buy_price(stock)
@@ -102,16 +102,16 @@ class trade(object):
             return 
         if price ==0:
             price = ask1 # 股价已经跌停，按卖方价买入
-        postdata={"action":0,"priceType":0,"price":price,"amount":number,"symbol":stock}
+        postdata={"action":0,"priceType":0,"price":price+jump,"amount":number,"symbol":stock}
         self.order(postdata)
         
-    def sell(self,stock,number):
+    def sell(self,stock,number,jump=0):
         price,buy1 = self.set_sell_price(stock)
         if buy1 <=0 : #股票已经跌停，不卖出,因为没法卖出,或者股价已经涨停，不卖
             return 
         if price == 0:
             price = buy1 # 股价已经涨停，按买方价卖出
-        postdata={"action":1,"priceType":0,"price":price,"amount":number,"symbol":stock}
+        postdata={"action":1,"priceType":0,"price":price-jump,"amount":number,"symbol":stock}
         self.order(postdata)  
 
     def order(self,postdata):

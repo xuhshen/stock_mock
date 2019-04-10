@@ -23,7 +23,7 @@ docker run -d --name stock_mock -e IP=stock_mongo --restart unless-stopped --net
 #### update stock mock strategy
 
 docker rm -f stock_strategy
-docker run  -d --name stock_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc1  -e RATE=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
+docker run  -d --name stock_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_acc1  -e RATE=1 -e PRODUCTS=1 --network stockmock-net 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
 
 #### update 500etf mock strategy
 docker rm -f 500ETF_strategy
