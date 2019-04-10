@@ -163,10 +163,10 @@ class SP(object):
                 lastholdnumber = self.hd_df.ix[stock]["可卖数量"]
                 self.sell(stock,min(-cangcha,lastholdnumber))
     
-    def buy(self,stock,number,jump=0.002):
+    def buy(self,stock,number,jump=0.02):
         self.trader.buy(stock, number,jump=jump)
     
-    def sell(self,stock,number,jump=0.002):
+    def sell(self,stock,number,jump=0.02):
         self.trader.sell(stock, number,jump=jump)
     
     def check_position(self,status):
