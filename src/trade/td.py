@@ -102,7 +102,7 @@ class trade(object):
             return 
         if price ==0:
             price = ask1 # 股价已经跌停，按卖方价买入
-        postdata={"action":0,"priceType":0,"price":price+jump,"amount":number,"symbol":stock}
+        postdata={"action":0,"priceType":0,"price":price+jump,"amount":int(number),"symbol":stock}
         self.order(postdata)
         
     def sell(self,stock,number,jump=0):
@@ -111,7 +111,7 @@ class trade(object):
             return 
         if price == 0:
             price = buy1 # 股价已经涨停，按买方价卖出
-        postdata={"action":1,"priceType":0,"price":price-jump,"amount":number,"symbol":stock}
+        postdata={"action":1,"priceType":0,"price":price-jump,"amount":int(number),"symbol":stock}
         self.order(postdata)  
 
     def order(self,postdata):
