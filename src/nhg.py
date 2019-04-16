@@ -56,7 +56,7 @@ if __name__ == '__main__':
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='14',minute='40',misfire_grace_time=60)
       
-    sched.add_job(s.run,'cron', day_of_week='0-4', hour='14',minute='50,55,59',misfire_grace_time=60)
+    sched.add_job(s.run,'cron', day_of_week='0-4', hour='14',minute='50,55',misfire_grace_time=60)
       
     sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
        

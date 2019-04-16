@@ -53,9 +53,6 @@ docker run  -d --name nhg_35204819  -e ACCOUNT=account3  -e SERVER=http://192.16
 docker rm -f nhg_35204099 
 docker run  -d --name nhg_35204099  -e ACCOUNT=account2  -e SERVER=http://192.168.0.100:65000 --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/nhg.py
 
-docker rm -f nhg_15064762
-docker run  -d --name nhg_15064762  -e ACCOUNT=account3  -e SERVER=http://192.168.0.100:5000 --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/nhg.py
-
 docker rm -f nhg_51307088
 docker run  -d --name nhg_51307088  -e ACCOUNT=account4  -e SERVER=http://192.168.0.100:5000 --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/nhg.py
 
