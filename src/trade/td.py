@@ -151,9 +151,9 @@ class trade(object):
     def autobuy(self):
         '''自动比较利率购买逆回购
         '''
-        gzrate = self.get_latest_price(self.gznhg).ix[0,"bid4"]*0.1
-        qyzrate = self.get_latest_price(self.qyznhg).ix[0,"bid4"]*0.1
-        account,_ = self.get_position()
+        gzrate = self.get_latest_price(self.gznhg)["bid4"]*0.1
+        qyzrate = self.get_latest_price(self.qyznhg)["bid4"]*0.1
+        account,_ = self.position()
         restmoney = account.ix["可用"]["人民币"]
         if gzrate > qyzrate:
             self.buygznhg(restmoney,gzrate)

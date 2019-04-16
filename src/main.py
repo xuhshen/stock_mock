@@ -379,7 +379,6 @@ class SP(object):
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
     account = os.environ.get('ACCOUNT',"account2")
-#     account = os.environ.get('ACCOUNT',"test")
     rate = float(os.environ.get('RATE',"0.2"))
     products = os.environ.get('PRODUCTS',"2")
     server=os.environ.get('SERVER',"http://192.168.0.100:65000")
@@ -388,9 +387,10 @@ if __name__ == '__main__':
     if mock == "False":mock = False
 
     s = SP(userid=account,rate=rate,products=products,mock=mock,server=server)
-#     s = SP(userid=account,rate=rate,products=products,mock=False,server=server)
-    s.initial()
-#     s.run()
+    try:
+        s.initial()
+    except:
+        s.initial()
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
      
