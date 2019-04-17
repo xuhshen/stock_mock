@@ -317,7 +317,7 @@ class SP(object):
             cangcha = int((number-h_number)/100)*100
             
             if h_number>0 and abs(cangcha)/h_number<0.1: #如果有持仓，同时仓差小于10% 不进行更改，为了处理频繁加减仓达到问题
-                return 
+                continue 
                 
             if cangcha>0:
                 logger.info("buy code:{}, number:{}".format(stock,number-h_number))
@@ -379,7 +379,7 @@ class SP(object):
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
     account = os.environ.get('ACCOUNT',"account2")
-    rate = float(os.environ.get('RATE',"0.2"))
+    rate = float(os.environ.get('RATE',"1"))
     products = os.environ.get('PRODUCTS',"2")
     server=os.environ.get('SERVER',"http://192.168.0.100:65000")
     

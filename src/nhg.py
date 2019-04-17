@@ -30,8 +30,6 @@ class SP(object):
                 pass
     
     def disconnect(self):
-        if not self.istradeday:
-            return 
         
         self.api.disconnect()
     
