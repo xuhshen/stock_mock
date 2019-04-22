@@ -94,12 +94,13 @@ class SP(object):
             temp = self.api.get_index_bars(self.datatype, market, product, (int(number/pn)-i)*pn,pn)
             
             if not temp or len(temp)<pn:
+                self.connect()
                 for _ in range(2):
                     temp = self.api.get_index_bars(self.datatype, market, product, (int(number/pn)-i)*pn,pn)
                     if not temp or len(temp)<pn:
                         logger.info("record not reach the limit!")
                     else:
-                        break    
+                        break   
             data += temp
         df = self.api.to_df(data)[["open","close","high","low","datetime"]]
         df.set_index("datetime",inplace=True,drop=False)
@@ -316,7 +317,7 @@ class SP(object):
             #补仓差
             cangcha = int((number-h_number)/100)*100
             
-            if h_number>0 and abs(cangcha)/h_number<0.1: #如果有持仓，同时仓差小于10% 不进行更改，为了处理频繁加减仓达到问题
+            if h_number>0 and abs(cangcha)/h_number<0.2: #如果有持仓，同时仓差小于10% 不进行更改，为了处理频繁加减仓达到问题
                 continue 
                 
             if cangcha>0:
