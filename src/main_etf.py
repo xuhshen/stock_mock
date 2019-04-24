@@ -63,10 +63,10 @@ class SP(object):
         return df
     
     def disconnect(self):
-        if not self.istradeday:
-            return 
-        
-        self.api.disconnect()
+        logger.info("[DISCONNECT]:statrt disconnect!!!!!")
+        if self.istradeday:
+            self.api.disconnect()
+        logger.info("[DISCONNECT]:disconnect finished!!!!!")
     
     def set_number(self):
         '''设置日内交易的单次手数
@@ -91,18 +91,18 @@ class SP(object):
     def initial(self):
         '''每天初始化设置
         '''
+        logger.info("[INITIAL]:start initial !!!!")
         if not self.istradeday:
             self.trading = False
             return 
         self.trading = True
-        logger.info("try to create connect... ")
+        logger.info("[INITIAL]:try to create connect... ")
         self.connect()
         self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock,server=self.server)
-        logger.info("connect successful!")
+        logger.info("[INITIAL]:connect successful!")
         
         self.set_number() #设置手数
-        print(self.products)
-        logger.info("initial account info finished")
+        logger.info("[INITIAL]:initial finished !!!!!")
 
     def handledata(self,df,args=[]):
         df.loc[:,"number"] = range(df.shape[0]) 
@@ -156,10 +156,10 @@ class SP(object):
                 return 
                 
             if cangcha>0:
-                logger.info("buy code:{}, number:{}".format(stock,number-h_number))
+                logger.info("[RUN]:buy code:{}, number:{}".format(stock,number-h_number))
                 self.buy(stock,cangcha)
             elif cangcha<0:
-                logger.info("sell code:{}, number:{}".format(stock,h_number-number))
+                logger.info("[RUN]:sell code:{}, number:{}".format(stock,h_number-number))
                 lastholdnumber = self.hd_df.ix[stock]["可卖数量"]
                 self.sell(stock,min(-cangcha,lastholdnumber))
     
@@ -196,6 +196,7 @@ class SP(object):
     
     def run(self):
         
+        logger.info("[RUN]:start run !!!!!")
         if not self.trading:
             return
         
@@ -204,11 +205,12 @@ class SP(object):
         rst = {}
         for idx in list(self.products.keys()):
             director = self.handledata(self.getdata(idx,market=1),self.products[idx]["args"]) #用指数出信号
-            logger.info("trademessage: block:{}, director:{}".format(idx,director))
+            logger.info("[RUN]:trademessage: block:{}, director:{}".format(idx,director))
             self.sync(idx,director)
             rst[idx] = {"up":director,"number":self.products[idx]["stocklst"],"product":idx}
         
-        logger.info("lastest position status:{}".format(rst))
+        logger.info("[RUN]:lastest position status:{}".format(rst))
+        logger.info("[RUN]:run finished !!!!!")
     
     def nhg(self):
         '''尾盘自动进行逆回购
@@ -225,9 +227,8 @@ if __name__ == '__main__':
     server=os.environ.get('SERVER',"http://192.168.0.100:65000")  
     
     if mock == "False":mock = False
-
+    
     s = SP(userid=account,number=number,mock=mock,server=server)
-#     s = SP(userid="account1",number=0.001,mock=False,server=server)
     s.initial()
 #     s.run()
     sched = BlockingScheduler()

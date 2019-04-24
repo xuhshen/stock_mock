@@ -30,19 +30,24 @@ class SP(object):
                 pass
     
     def disconnect(self):
-        
+        logger.info("[DISCONNECT]:start disconnect !!!!!")
         self.api.disconnect()
+        logger.info("[DISCONNECT]:disconnect finished !!!!!")
     
     def initial(self):
         '''每天初始化设置
         '''
-        logger.info("try to create connect... ")
+        logger.info("[INITIAL]:start initial !!!!!")
+        logger.info("[INITIAL]:try to create connect... ")
         self.connect()
         self.trader = trade(UserID=self.userid,api=self.api,mock=False,server=self.server)
-        logger.info("connect successful!")
+        logger.info("[INITIAL]:connect successful!")
+        logger.info("[INITIAL]:initial finished !!!!!")
         
     def run(self):
+        logger.info("[RUN]:start run !!!!!")
         self.trader.autobuy()
+        logger.info("[RUN]:run finished !!!!!")
         
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler

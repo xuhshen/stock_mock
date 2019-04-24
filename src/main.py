@@ -107,10 +107,10 @@ class SP(object):
         return df
     
     def disconnect(self):
-        if not self.istradeday:
-            return 
-        
-        self.api.disconnect()
+        logger.info("[DISCONNECT]:statrt disconnect!!!!!")
+        if self.istradeday:
+            self.api.disconnect()
+        logger.info("[DISCONNECT]:disconnect finished!!!!!")
     
     def updatetotal(self):
         '''更新总资金
@@ -250,21 +250,23 @@ class SP(object):
     def initial(self):
         '''每天初始化设置
         '''
+        logger.info("[INITIAL]:start initial !!!!!!")
         if not self.istradeday:
             self.trading = False
             return 
         self.trading = True
-        logger.info("try to create connect... ")
+        logger.info("[INITIAL]:try to create connect... ")
         self.connect()
         self.trader = trade(UserID=self.userid,api=self.api,mock=self.mock,server=self.server)
-        logger.info("connect successful!")
+        logger.info("[INITIAL]:connect successful!")
         
-        logger.info("initial account info...")
+        logger.info("[INITIAL]:initial account info...")
         self.updatetotal() #更新账户总资金
         self.set_permoney() #设置单个品种资金上限
-        logger.info("set per product money limit:{}".format(self.permoney))
+        logger.info("[INITIAL]:set per product money limit:{}".format(self.permoney))
         self.set_instrument() #设置交易股票和手数
-        logger.info("set stock list succcessful !!!")
+        logger.info("[INITIAL]:set stock list succcessful !!!")
+        logger.info("[INITIAL]:initial finished!!!!!!")
 
     def handledata(self,df,args=[]):
         df.loc[:,"number"] = range(df.shape[0]) 
@@ -312,7 +314,7 @@ class SP(object):
                  
             except:
                 h_number = 0
-            logger.info("{},{},{}".format(stock,h_number,number))
+            logger.info("[RUN]:{},{},{}".format(stock,h_number,number))
         
             #补仓差
             cangcha = int((number-h_number)/100)*100
@@ -321,11 +323,11 @@ class SP(object):
                 continue 
                 
             if cangcha>0:
-                logger.info("buy code:{}, number:{}".format(stock,number-h_number))
+                logger.info("[RUN]:buy code:{}, number:{}".format(stock,number-h_number))
                 self.buy(stock,cangcha)
             elif cangcha<0:
                 couldsell = self.hd_df.ix[code]["可卖数量"]
-                logger.info("sell code:{}, number:{},couldsell:{}".format(stock,h_number-number,couldsell))
+                logger.info("[RUN]:sell code:{}, number:{},couldsell:{}".format(stock,h_number-number,couldsell))
                 if couldsell >0:
                     self.sell(stock,min(-cangcha,couldsell))
     
@@ -361,7 +363,7 @@ class SP(object):
         return self.hd_df
     
     def run(self):
-        
+        logger.info("[RUN]:start run !!!!!")
         if not self.trading:
             return
         
@@ -370,12 +372,12 @@ class SP(object):
         rst = {}
         for idx in list(self.products.keys()):
             director = self.handledata(self.getdata(idx,market=1),self.products[idx]["args"]) #用指数出信号
-            logger.info("trademessage: block:{}, director:{}".format(idx,director))
+            logger.info("[RUN]:trademessage: block:{}, director:{}".format(idx,director))
             self.sync(idx,director)
             rst[idx] = {"up":director,"number":self.products[idx]["stocklst"],"product":idx}
         
-        logger.info("lastest position status:{}".format(rst))
-            
+        logger.info("[RUN]:lastest position status:{}".format(rst))
+        logger.info("[RUN]:run finished !!!!!")    
 
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
