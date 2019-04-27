@@ -1,5 +1,7 @@
 #!/bin/bash
 
+##git tag -a $1 -m "my version $1"
+
 ###update image
 docker build -t 127.0.0.1:5000/xuhshen/stock_mock:latest .
 
