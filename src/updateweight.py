@@ -11,8 +11,7 @@ from pytdx.hq import TdxHq_API
 import math
 from cfg import logger,FILE_INCON,FILE_TDXHY,FILE_TDXZS,STOCK_IP_SETS
 import re,os
-# import sys
-# print (sys._getframe().f_code.co_name ) #获取当前函数名
+import sys
 
 class basic(object):
     def __init__(self,ip="192.168.0.106"):
@@ -47,27 +46,39 @@ class basic(object):
             rev,收入同比(%)            profit,利润同比(%)   gpr,毛利率(%)
             npr,净利润率(%)            holders,股东人数
         '''
+        
         df = ts.get_stock_basics()
+        df = df.apply(lambda x:round(x,6) if isinstance(x,float) else x) #处理数据精度
+        df.loc[:,"ST"] = df["name"].map(lambda x:True if "ST" in x.upper() else False)
+        df.loc[:,"code"] = df.index
+        
         return df
     
-    def calculateltsz(self):
+    def save_basic(self,df):
+        '''保存基本信息到数据库
+        '''
+        self.mongo._dbclient(self.mongo.db)[self.collection].ensure_index("code", unique=True)
+        bulk = self.mongo._dbclient(self.mongo.db)[self.collection].initialize_ordered_bulk_op()
+        data = df.to_dict("record")
+        for item in data:
+            filt = {"code":item["code"]}
+            bulk.find(filt).upsert().update({"$set":item})
+        bulk.execute()
+    
+    def calculateltsz(self,df):
         '''计算流通市值
            output:{code:[gb,value}
         '''
-        logger.info("[RUN]:get stick basic info from tushare start !")
-        df = self.get_stock_basics()
-        logger.info("[RUN]:get stick basic info from tushare finished !")
-        
+
         df.loc[:,"market"] = df.index.map(lambda x:0 if x[0] in ["0","3"] else 1)
-        df.loc[:,"stock"] = df.index
         
-        rst = df[df["outstanding"]>0][["market","stock",]].values
+        rst = df[df["outstanding"]>0][["market","code",]].values
         pn = 80
         total = rst.shape[0]
         #更新流通股本为0的股票的价格为0
-        prices = {code:0 for code in df[df["outstanding"]==0]["stock"].values}
+        prices = {code:0 for code in df[df["outstanding"]==0]["code"].values}
         
-        liutonggb = {code:ltgb for code,ltgb in df[["stock","outstanding"]].values}
+        liutonggb = {code:ltgb for code,ltgb in df[["code","outstanding"]].values}
         zeros = []
         
         #更新流通股本大于0的股票
@@ -92,7 +103,7 @@ class basic(object):
         return liutongvalues
         
     def updatevalue2db(self,data):
-        self.mongo._dbclient(self.mongo.db)[self.collection].ensure_index("code", unique=True)
+        
         bulk = self.mongo._dbclient(self.mongo.db)[self.collection].initialize_ordered_bulk_op()
         for k,v in data.items():
             filt = {"code":k}
@@ -103,7 +114,7 @@ class basic(object):
         bulk = self.mongo._dbclient(self.mongo.db)[self.collection].initialize_ordered_bulk_op()
         for k,v in data.items():
             filt = {"code":k}
-            bulk.find(filt).upsert().update({"$set":{"weight":v[0],"hyname":v[1],"hycode":v[2]}})
+            bulk.find(filt).upsert().update({"$set":{"hyweight":v[0],"hyname":v[1],"hycode":v[2]}})
         bulk.execute()
     
     def _get_incon(self,):
@@ -173,27 +184,32 @@ class basic(object):
     def run(self):
         '''更新流通股本和行业板块权重到数据库
         '''
-        logger.info("[RUN]:create connect to tdx and mongo! ")
+        funcname = sys._getframe().f_code.co_name.upper() #获取当前函数名
+        
+        logger.info("[{}]: create connect to tdx and mongo! ".format(funcname))
         self.connect()
-        logger.info("[RUN]:create connect to tdx and mongo finished! ")
+        logger.info("[{}]: create connect to tdx and mongo finished! ".format(funcname))
         
-        logger.info("[RUN]:get latest price and calculate liutong value start ! ")
-        liutongvalues = self.calculateltsz()
-        logger.info("[RUN]:get latest price and calculate liutong value finished ! ")
+        df = self.get_stock_basics()
+        self.save_basic(df)
+        
+        logger.info("[{}]: get latest price and calculate liutong value start ! ".format(funcname))
+        liutongvalues = self.calculateltsz(df)
+        logger.info("[{}]: get latest price and calculate liutong value finished ! ".format(funcname))
          
-        logger.info("[RUN]:update liu tong gu ben to db start ! ")
+        logger.info("[{}]: update liu tong gu ben to db start ! ".format(funcname))
         self.updatevalue2db(liutongvalues)
-        logger.info("[RUN]:update liu tong gu ben to db finished ! ")
+        logger.info("[{}]: update liu tong gu ben to db finished ! ".format(funcname))
         
-        logger.info("[RUN]:calculate hang ye weight! ") 
+        logger.info("[{}]: calculate hang ye weight! ".format(funcname)) 
         weights = self.calculateweight(liutongvalues) 
-        logger.info("[RUN]:update hang ye weight to db start ! ") 
+        logger.info("[{}]: update hang ye weight to db start ! ".format(funcname)) 
         self.updateweight2db(weights)
-        logger.info("[RUN]:update hang ye weight to db finished ! ") 
+        logger.info("[{}]: update hang ye weight to db finished ! ".format(funcname)) 
         
-        logger.info("[RUN]:disconnect from tdx and mongo start ! ")
+        logger.info("[{}]: disconnect from tdx and mongo start ! ".format(funcname))
         self.disconnect()
-        logger.info("[RUN]:disconnect from tdx and mongo finished ! ")
+        logger.info("[{}]: disconnect from tdx and mongo finished ! ".format(funcname))
     
 
 if __name__ == "__main__":
