@@ -18,7 +18,7 @@ class basic(object):
         self.mongo = MongoDB(ip=ip)
         self.api = TdxHq_API(heartbeat=True)
         self.TDX_IP_SETS = STOCK_IP_SETS
-        self.collection = "STOCKS4STRATEGY1"
+        self.collection = "BASIC_INFO"
         self.file_incon = FILE_INCON
         self.file_tdxhy = FILE_TDXHY
         self.file_tdxzs = FILE_TDXZS
