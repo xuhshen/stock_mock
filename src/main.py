@@ -307,11 +307,8 @@ class SP(object):
             
             #判断现有持仓
             try:
-#                 h_number = self.hd_df.ix[stock]["参考持股"]
-                if self.mock: code = stock
-                else:code = str(int(stock))
+                code = stock
                 h_number = self.hd_df.ix[code]["证券数量"]
-                 
             except:
                 h_number = 0
             logger.info("[RUN]:{},{},{}".format(stock,h_number,number))
@@ -321,7 +318,7 @@ class SP(object):
             
             if h_number>0 and abs(cangcha)/h_number<0.2: #如果有持仓，同时仓差小于10% 不进行更改，为了处理频繁加减仓达到问题
                 continue 
-                
+                 
             if cangcha>0:
                 logger.info("[RUN]:buy code:{}, number:{}".format(stock,number-h_number))
                 self.buy(stock,cangcha)
@@ -330,7 +327,7 @@ class SP(object):
                 logger.info("[RUN]:sell code:{}, number:{},couldsell:{}".format(stock,h_number-number,couldsell))
                 if couldsell >0:
                     self.sell(stock,min(-cangcha,couldsell))
-    
+#     
     def buy(self,stock,number):
         self.trader.buy(stock, number)
     
@@ -359,7 +356,8 @@ class SP(object):
         self.hd_df = holdlists
         if holdlists.shape[0]>0:
             self.hd_df.set_index("证券代码",inplace=True)
-            self.hd_df.index = self.hd_df.index.astype(np.str)
+            self.hd_df.index = self.hd_df.index.astype(np.str).map(lambda x:x if len(x)>=6 else "0"*(6-len(x))+x)
+            
         return self.hd_df
     
     def run(self):

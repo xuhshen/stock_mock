@@ -46,6 +46,11 @@ docker run  -d --name 500ETF_strategy -e IP=stock_mongo -e ACCOUNT=stock_mock_ac
 docker rm -f stock_strategy_35204099
 docker run -d --name stock_strategy_35204099 -e IP=stock_mongo -e ACCOUNT=account2 -e RATE=1 -e PRODUCTS=2 -e MOCK=False --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
 
+
+docker rm -f stock_strategy_41516237
+docker run -d --name stock_strategy_41516237 -e IP=stock_mongo -e ACCOUNT=account4 -e RATE=1 -e PRODUCTS=1 -e MOCK=False --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/main.py
+
+
 ############################################################################
 ###500 etf
 docker rm -f 500ETF_strategy_35200453 
@@ -73,6 +78,8 @@ docker run  -d --name nhg_35204099  -e ACCOUNT=account2  -e SERVER=http://192.16
 docker rm -f nhg_624006928
 docker run  -d --name nhg_624006928  -e ACCOUNT=account5  -e SERVER=http://192.168.0.100:65000 --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/nhg.py
 
+docker rm -f nhg_41516237
+docker run  -d --name nhg_41516237  -e ACCOUNT=account4  -e SERVER=http://192.168.0.100:65000 --network stockmock-net --restart unless-stopped 127.0.0.1:5000/xuhshen/stock_mock:latest python /home/nhg.py
 
 
 
