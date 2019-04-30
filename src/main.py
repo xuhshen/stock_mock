@@ -115,8 +115,9 @@ class SP(object):
     def updatetotal(self):
         '''更新总资金
         '''
-        accountinfo,_ = self.trader.position()
-        self.total = accountinfo.ix["总资产"]["人民币"]
+        accountinfo,holdlists = self.trader.position()
+        nhg = holdlists[holdlists[u"证券代码"].map(lambda x:x in ["SZRQ88","SHRQ88"])][u"最新市值"].sum()
+        self.total = accountinfo.ix["总资产"]["人民币"]-nhg
         return self.total
     
     def set_permoney(self):
@@ -394,13 +395,13 @@ if __name__ == '__main__':
         s.initial()
     sched = BlockingScheduler()
     sched.add_job(s.initial,'cron', day_of_week='0-4', hour='9',minute='25',misfire_grace_time=60)
-     
+      
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='9',minute='44,59',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='11',minute='14,29',misfire_grace_time=60)
     sched.add_job(s.run,'cron', day_of_week='0-4', hour='10,13,14',minute='14,29,44,56',misfire_grace_time=60)
-     
-    sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
       
+    sched.add_job(s.disconnect,'cron', day_of_week='0-4', hour='15',minute='15',misfire_grace_time=60)
+       
     sched.start()
     
     
