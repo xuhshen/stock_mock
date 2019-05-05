@@ -9,12 +9,15 @@ import tushare as ts
 from trade.td import MongoDB
 from pytdx.hq import TdxHq_API
 import math
-from cfg import logger,FILE_INCON,FILE_TDXHY,FILE_TDXZS,STOCK_IP_SETS
+from cfg import logger,FILE_INCON,FILE_TDXHY,FILE_TDXZS,STOCK_IP_SETS,\
+                ONLINE_FILE_INCON,ONLINE_FILE_TDXHY,ONLINE_FILE_TDXZS
 import re,os
 import sys
+import shutil 
+import urllib.request as request
 
 class basic(object):
-    def __init__(self,ip="192.168.0.106"):
+    def __init__(self,ip="192.168.0.106",online=True):
         self.mongo = MongoDB(ip=ip)
         self.api = TdxHq_API(heartbeat=True)
         self.TDX_IP_SETS = STOCK_IP_SETS
@@ -22,6 +25,28 @@ class basic(object):
         self.file_incon = FILE_INCON
         self.file_tdxhy = FILE_TDXHY
         self.file_tdxzs = FILE_TDXZS
+        
+        self.online = online #版本库获取最新文件
+
+    def updatelocalfile(self):
+        with open('tmp1', 'wb') as f:
+            r = request.urlopen(ONLINE_FILE_INCON).read()
+            f.write(r)
+            if b"#ZJHHY" in r: #内容检查
+                shutil.copy("tmp1",self.file_incon)
+    
+        with open('tmp2', 'wb') as f:
+            r = request.urlopen(ONLINE_FILE_TDXHY).read()
+            f.write(r)
+            if b"000001" in r: #内容检查
+                shutil.copy("tmp2",self.file_tdxhy)
+            
+        with open('tmp3', 'wb') as f:
+            r = request.urlopen(ONLINE_FILE_TDXZS).read()
+            f.write(r)
+            if b"880472" in r: #内容检查
+                shutil.copy("tmp3",self.file_tdxzs)
+        return 
 
     def connect(self):
         self.mongo.connect()
@@ -186,6 +211,11 @@ class basic(object):
         '''
         funcname = sys._getframe().f_code.co_name.upper() #获取当前函数名
         
+        if self.online:
+            logger.info("[{}]: update local config file! ".format(funcname))
+            self.updatelocalfile()
+            logger.info("[{}]: update local config file finished! ".format(funcname))
+        
         logger.info("[{}]: create connect to tdx and mongo! ".format(funcname))
         self.connect()
         logger.info("[{}]: create connect to tdx and mongo finished! ".format(funcname))
@@ -218,11 +248,11 @@ if __name__ == "__main__":
     
     bs = basic(ip=ip)
     bs.run()
-    
+     
     sched = BlockingScheduler()
 #     sched.add_job(bs.run,'cron', month='*',day="1",hour='9',minute='30',misfire_grace_time=60)
     sched.add_job(bs.run,'cron', day_of_week='0-4',hour='9',minute='30',misfire_grace_time=60) #每个工作日更新,程序在每次新开仓买入的时候去更新权重
-     
+      
     sched.start()
     
     

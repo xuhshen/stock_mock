@@ -30,6 +30,11 @@ FILE_INCON = "files/incon.dat"
 FILE_TDXHY = "files/tdxhy.cfg"
 FILE_TDXZS = "files/tdxzs.cfg"
 
+
+ONLINE_FILE_INCON = "https://raw.githubusercontent.com/xuhshen/stock_mock/master/src/files/incon.dat"
+ONLINE_FILE_TDXHY = "https://raw.githubusercontent.com/xuhshen/stock_mock/master/src/files/tdxhy.cfg"
+ONLINE_FILE_TDXZS = "https://raw.githubusercontent.com/xuhshen/stock_mock/master/src/files/tdxzs.cfg"
+
 HY_WEIGHT = {'300604': 186, '300353': 302, '600529': 728, '002818': 191, '600259': 572, '300133': 1007, '300252': 422, 
              '300096': 378, '600855': 357, '300140': 198, '300487': 296, '002060': 349, '002244': 1005, '300080': 300, 
              '002855': 69, '000972': 210, '000605': 248, '002235': 248, '600202': 136, '300069': 91, '002873': 105, 
