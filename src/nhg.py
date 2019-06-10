@@ -10,6 +10,7 @@ from cfg import logger,STOCK_IP_SETS
 from gevent import monkey;monkey.patch_all()
 from trade import trade
 import os
+import tushare as ts
 
 class SP(object):
     def __init__(self,userid="account4",server="http://192.168.118.1:5000"):
@@ -42,9 +43,16 @@ class SP(object):
         self.connect()
         self.trader = trade(UserID=self.userid,api=self.api,mock=False,server=self.server)
         logger.info("[INITIAL]:connect successful!")
+        self.trading = self.judgetradeday()
         logger.info("[INITIAL]:initial finished !!!!!")
+    
+    def judgetradeday(self):
+        today = datetime.datetime.today().date().strftime('%Y-%m-%d')
+        df = ts.trade_cal()
+        return df[(df["calendarDate"]==today)].isOpen.values[0]
         
     def run(self):
+        if not self.trading:return 
         logger.info("[RUN]:start run !!!!!")
         self.trader.autobuy()
         logger.info("[RUN]:run finished !!!!!")
